@@ -9,7 +9,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace asp_web_mydemo
+using MyAspDemos.Data;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.SqlServer;
+
+namespace MyAspDemos
 {
     public class Startup
     {
@@ -23,8 +27,22 @@ namespace asp_web_mydemo
         // This method gets called by the runtime. Use this method to add services to the container.
         public void ConfigureServices(IServiceCollection services)
         {
-            services.AddRazorPages();
+            // NOTE: This should ALWAYS BE the FIRST service registered in the ConfigureServices() method
+            // Register EntityFramework Core Services to use SQL Server
+            // Register ApplicationDbContext as a Service that can be used using Dependency Injection (DI) in any Controller
+            services
+                .AddDbContext<ApplicationDbContext>(options =>
+                {
+                    // Get the SQL Connection String from the AppSettings.json file
+                    string connString = Configuration.GetConnectionString("MyDefaultConnectionString");
+
+                    options.UseSqlServer(connString);
+                });
+
+            services
+                .AddRazorPages();
         }
+
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
@@ -50,7 +68,19 @@ namespace asp_web_mydemo
             app.UseEndpoints(endpoints =>
             {
                 endpoints.MapRazorPages();
+
+                // Register the endpoints for the ROUTES in the AREAS
+                endpoints.MapControllerRoute(
+                    name: "areas",
+                    pattern: "{area}/{controller=Home}/{action=Index}/{id?}");
+
+                // Register the endpoints for the ROUTES not in any area.
+                endpoints.MapControllerRoute(
+                    name: "default",
+                    pattern: "{controller=Home}/{action=Index}/{id?}");
+
             });
         }
     }
 }
+
